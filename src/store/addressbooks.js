@@ -346,8 +346,7 @@ const actions = {
 	 */
 	async getContactsFromAddressBook(context, { addressbook }) {
 		return addressbook.dav
-			.findAllAndFilterBySimpleProperties(['EMAIL', 'UID', 'CATEGORIES', 'FN', 'ORG', 'N',
-				'X-PHONETIC-FIRST-NAME', 'X-PHONETIC-LAST-NAME'])
+			.findAllAndFilterBySimpleProperties(Contact.MinimalContactProperties)
 			.then((response) => {
 				// We don't want to lose the url information
 				// so we need to parse one by one
