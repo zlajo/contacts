@@ -20,6 +20,85 @@
  *
  */
 
+import Vue from 'vue'
+import { namespaces as NS } from 'cdav-library'
+
+import Contact from '../models/contact'
+
+async function findOrCreateGroup(groupName, addressbook) {
+	return new Promise(function(resolve, reject) {
+		findGroupByName(groupName, addressbook).then(function(group) {
+			if (group) {
+				resolve(group)
+			} else {
+				createGroup(groupName, addressbook).then(function(group) {
+					resolve(group)
+				}).catch((error) => {
+					reject(error)
+				})
+			}
+		}).catch((error) => {
+			reject(error)
+		})
+	})
+}
+
+async function findGroupByName(groupName, addressbook) {
+	return addressbook.dav.addressbookQuery([
+		{
+			name: [NS.IETF_CARDDAV, 'prop-filter'],
+			attributes: [
+				['name', 'FN'],
+			],
+			children: [{
+				name: [NS.IETF_CARDDAV, 'text-match'],
+				attributes: [
+					['collation', 'i;unicode-casemap'],
+					['match-type', 'equals'],
+				],
+				value: groupName,
+			}],
+		},
+	]).then(function(cards) {
+		return cards
+			.map(function(c) {
+				const card = new Contact(c.data, addressbook)
+				Vue.set(card, 'dav', c)
+				return card
+			}).find(function(c) {
+				return c.kind.toLowerCase() === 'group'
+			})
+	}).catch((error) => {
+		console.error(error)
+
+		throw error
+	})
+}
+
+async function createGroup(groupName, addressbook) {
+	const contactGroup = new Contact(`
+		BEGIN:VCARD
+		VERSION:3.0
+		X-ADDRESSBOOKSERVER-KIND:group
+		PRODID:-//Nextcloud Contacts v${appVersion}
+		N:${groupName};;;;
+		FN:${groupName}
+		END:VCARD
+	`.trim().replace(/\t/gm, ''),
+	addressbook)
+
+	return addressbook.dav.createVCard(contactGroup.vCard.toString())
+		.then(function(c) {
+			const card = new Contact(c.data, addressbook)
+			Vue.set(card, 'dav', c)
+			return card
+		}).catch((error) => {
+			console.error(error)
+
+			throw error
+		})
+}
+
 const state = {
 	groups: [],
 }
@@ -71,7 +150,14 @@ const mutations = {
 				})
 				group = state.groups.find(search => search.name === groupName)
 			}
+
 			group.contacts.push(contact.key)
+
+			findOrCreateGroup(groupName, contact.addressbook).then(function(group) {
+				group.vCard.addPropertyWithValue('X-ADDRESSBOOKSERVER-MEMBER', 'urn:uuid:' + contact.uid)
+				group.dav.data = group.vCard.toString()
+				group.dav.update()
+			})
 		})
 	},
 
@@ -89,6 +175,24 @@ const mutations = {
 		if (index > -1) {
 			contacts.splice(index, 1)
 		}
+
+		findGroupByName(groupName, contact.addressbook).then(function(group) {
+			if (group) {
+				group.vCard.getAllProperties('x-addressbookserver-member')
+					.filter(function(p) {
+						return p.jCal[3] === 'urn:uuid:' + contact.uid
+					}).forEach(function(p) {
+						group.vCard.removeProperty(p)
+					})
+
+				if (group.vCard.getAllProperties('x-addressbookserver-member').length > 0) {
+					group.dav.data = group.vCard.toString()
+					group.dav.update()
+				} else {
+					group.dav.delete()
+				}
+			}
+		})
 	},
 
 	/**
@@ -102,6 +206,24 @@ const mutations = {
 			const index = group.contacts.indexOf(contact.key)
 			if (index !== -1) {
 				group.contacts.splice(index, 1)
+
+				findGroupByName(group.name, contact.addressbook).then(function(group) {
+					if (group) {
+						group.vCard.getAllProperties('x-addressbookserver-member')
+							.filter(function(p) {
+								return p.jCal[3] === 'urn:uuid:' + contact.uid
+							}).forEach(function(p) {
+								group.vCard.removeProperty(p)
+							})
+
+						if (group.vCard.getAllProperties('x-addressbookserver-member').length > 0) {
+							group.dav.data = group.vCard.toString()
+							group.dav.update()
+						} else {
+							group.dav.delete()
+						}
+					}
+				})
 			}
 		})
 	},
