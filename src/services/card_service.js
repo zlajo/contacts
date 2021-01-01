@@ -22,9 +22,26 @@
 
 // import ICAL from 'ical.js'
 import { namespaces as NS } from 'cdav-library'
-import Vue from 'vue'
 
 import Contact from '../models/contact'
+
+const VCARD_PROPERTIES_MEMBER = 'x-addressbookserver-member'
+
+const VCARD_UID_PREFIX = 'urn:uuid:'
+
+const vCardMixin = {
+	getAllProperties(name) {
+		return this.vCard.getAllProperties().filter(p => p.name === name.toLowerCase())
+	},
+
+	addPropertyWithValue(name, value) {
+		this.vCard.addPropertyWithValue(name, value)
+	},
+
+	removeProperty(property) {
+		this.vCard.removeProperty(property)
+	}
+}
 
 async function findGroupByName(addressbook, groupName) {
 	return addressbook.dav.addressbookQuery([
@@ -44,9 +61,10 @@ async function findGroupByName(addressbook, groupName) {
 		},
 	]).then(function(cards) {
 		return cards
-			.map(function(c) {
-				const card = new Contact(c.data, addressbook)
-				Vue.set(card, 'dav', c)
+			.map(function(dav) {
+				const card = new Contact(dav.data, addressbook)
+				Object.assign(card, vCardMixin)
+				card.dav = dav
 				return card
 			}).find(function(c) {
 				return c.kind.toLowerCase() === 'group'
@@ -67,9 +85,10 @@ async function createGroup(addressbook, groupName) {
 	addressbook)
 
 	return addressbook.dav.createVCard(contactGroup.vCard.toString())
-		.then(function(c) {
-			const card = new Contact(c.data, addressbook)
-			Vue.set(card, 'dav', c)
+		.then(function(dav) {
+			const card = new Contact(dav.data, addressbook)
+			Object.assign(card, vCardMixin)
+			card.dav = dav
 			return card
 		})
 }
@@ -86,48 +105,46 @@ async function findOrCreateGroup(addressbook, { name }) {
 					reject(error)
 				})
 			}
-	  })
-  })
+		})
+	})
 }
 
 async function addContactToGroup(addressbook, group, contact) {
-  return findOrCreateGroup(contact.addressbook, group).then(function(group) {
-    group.vCard.addPropertyWithValue('X-ADDRESSBOOKSERVER-MEMBER', 'urn:uuid:' + contact.uid)
-    group.dav.data = group.vCard.toString()
-    group.dav.update()
+	return findOrCreateGroup(contact.addressbook, group).then(function(group) {
+		if (group.getAllProperties(VCARD_PROPERTIES_MEMBER).length <= 0) {
+			group.addPropertyWithValue(VCARD_PROPERTIES_MEMBER, VCARD_UID_PREFIX + contact.uid)
+			group.dav.data = group.vCard.toString()
+			group.dav.update()
+		}
 
-    return { group, contact }
-  })
+		return { group, contact }
+	})
 }
 
 async function removeContactFromGroup(addressbook, group, contact) {
-  return findGroupByName(contact.addressbook, group.name).then(function(group) {
-    group.vCard.getAllProperties('X-ADDRESSBOOKSERVER-MEMBER')
-      .concat(group.vCard.getAllProperties('x-addressbookserver-member'))
-      .filter(function(p) {
-        return p.jCal[3] === 'urn:uuid:' + contact.uid || p.jCal[3] === 'URN:UUID:' + contact.uid
-      }).forEach(function(p) {
-        group.vCard.removeProperty(p)
-      })
+	return findGroupByName(contact.addressbook, group.name).then(function(group) {
+		group.getAllProperties(VCARD_PROPERTIES_MEMBER)
+			.filter(function(p) {
+				return p.getValues().map(v => v.toLowerCase()).some(v => v === (VCARD_UID_PREFIX + contact.uid).toLowerCase())
+			}).forEach(function(p) {
+				group.removeProperty(p)
+			})
 
-    if (group.vCard.getAllProperties('X-ADDRESSBOOKSERVER-MEMBER')
-        .concat(group.vCard.getAllProperties('x-addressbookserver-member'))
-        .length > 0) {
+		if (group.getAllProperties(VCARD_PROPERTIES_MEMBER).length > 0) {
+			group.dav.data = group.vCard.toString()
+			group.dav.update()
+		} else {
+			group.dav.delete()
+		}
 
-      group.dav.data = group.vCard.toString()
-      group.dav.update()
-    } else {
-      group.dav.delete()
-    }
-
-    return contact
-  })
+		return contact
+	})
 }
 
 export default {
-  findGroupByName,
-  createGroup,
-  findOrCreateGroup,
-  addContactToGroup,
-  removeContactFromGroup
+	findGroupByName,
+	createGroup,
+	findOrCreateGroup,
+	addContactToGroup,
+	removeContactFromGroup
 }
