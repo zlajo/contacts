@@ -40,7 +40,7 @@ const vCardMixin = {
 
 	removeProperty(property) {
 		this.vCard.removeProperty(property)
-	}
+	},
 }
 
 async function findGroupByName(addressbook, groupName) {
@@ -146,5 +146,5 @@ export default {
 	createGroup,
 	findOrCreateGroup,
 	addContactToGroup,
-	removeContactFromGroup
+	removeContactFromGroup,
 }
