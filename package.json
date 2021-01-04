@@ -30,7 +30,8 @@
 		"lint": "eslint --ext .js,.vue src",
 		"lint:fix": "eslint --ext .js,.vue src --fix",
 		"stylelint": "stylelint src",
-		"stylelint:fix": "stylelint src --fix"
+		"stylelint:fix": "stylelint src --fix",
+		"test": "node_modules/.bin/mocha tests/js/* --timeout 10000"
 	},
 	"dependencies": {
 		"@mattkrick/sanitize-svg": "^0.3.1",
@@ -81,6 +82,7 @@
 		"@nextcloud/webpack-vue-config": "^2.0.0",
 		"babel-eslint": "^10.1.0",
 		"babel-loader": "^8.2.2",
+		"chai": "^4.2.0",
 		"css-loader": "^4.3.0",
 		"eslint": "^7.17.0",
 		"eslint-config-standard": "^16.0.2",
@@ -92,8 +94,11 @@
 		"eslint-plugin-vue": "^7.4.1",
 		"eslint-webpack-plugin": "^2.4.1",
 		"file-loader": "^6.2.0",
+		"geckodriver": "^1.21.1",
+		"mocha": "^8.2.1",
 		"node-sass": "^5.0.0",
 		"sass-loader": "^10.1.0",
+		"selenium-webdriver": "^4.0.0-alpha.8",
 		"style-loader": "^2.0.0",
 		"stylelint": "^13.8.0",
 		"stylelint-config-recommended-scss": "^4.2.0",
