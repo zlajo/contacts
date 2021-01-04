@@ -20,7 +20,7 @@
  *
  */
 
-import CardService from '../services/card_service'
+import CardService from '../services/cardService'
 
 const state = {
 	groups: [],
@@ -141,9 +141,9 @@ const actions = {
 		CardService.addContactToGroup(contact.addressbook, { name: groupName }, contact).then(function() {
 			context.commit('addContactToGroups', { groupNames: [groupName], contact })
 		}).catch(function(error) {
-			console.log(error)
+			console.error(error)
 
-      throw error
+			throw error
 		})
 	},
 
@@ -156,9 +156,9 @@ const actions = {
 	removeContactFromGroups(context, contact) {
 		contact.groups.forEach(function(group) {
 			CardService.removeContactFromGroup(contact.addressbook, group, contact).then(function() {
-        context.commit('removeContactFromGroups', contact)
-      })
-    })
+				context.commit('removeContactFromGroups', contact)
+			})
+		})
 	},
 
 	/**
