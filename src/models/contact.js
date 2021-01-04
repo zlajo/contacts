@@ -37,16 +37,18 @@ const isEmpty = value => {
 	return (Array.isArray(value) && value.join('') === '') || (!Array.isArray(value) && value === '')
 }
 
+const ContactKindProperties = ['KIND', 'X-ADDRESSBOOKSERVER-KIND']
+
+const MinimalContactProperties = [
+	'EMAIL', 'UID', 'CATEGORIES', 'FN', 'ORG', 'N', 'X-PHONETIC-FIRST-NAME', 'X-PHONETIC-LAST-NAME',
+].concat(ContactKindProperties)
+
+export {
+	ContactKindProperties,
+	MinimalContactProperties,
+}
+
 export default class Contact {
-
-	static get ContactKindProperties() {
-		return ['KIND', 'X-ADDRESSBOOKSERVER-KIND']
-	}
-
-	static get MinimalContactProperties() {
-		return ['EMAIL', 'UID', 'CATEGORIES', 'FN', 'ORG', 'N', 'X-PHONETIC-FIRST-NAME', 'X-PHONETIC-LAST-NAME']
-			.concat(Contact.ContactKindProperties)
-	}
 
 	/**
 	 * Creates an instance of Contact
@@ -309,7 +311,7 @@ export default class Contact {
 	 */
 	get kind() {
 		return this.firstIfArray(
-			Contact.ContactKindProperties
+			ContactKindProperties
 				.map(s => s.toLowerCase())
 				.map(s => this.vCard.getFirstPropertyValue(s))
 				.flat()
