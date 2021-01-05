@@ -1,8 +1,17 @@
 const { Builder, By, Key, until } = require('selenium-webdriver');
 const { expect } = require('chai');
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe('DefaultTest', () => {
   var driver = new Builder().forBrowser('firefox').build()
+
+  before(async () => {
+    await login()
+    await reset()
+  })
 
   async function login() {
     await driver.get('https://local.zlattinger.net/login')
@@ -21,43 +30,38 @@ describe('DefaultTest', () => {
   async function reset() {
     await driver.get('https://local.zlattinger.net/apps/contacts/All contacts')
 
+    for (let title of await getAddressbookTitles()) {
+      await deleteAddressbook(title)
+    }
+  }
+
+  async function getAddressbookTitles() {
     await driver.wait(until.elementLocated(By.css('#app-settings-header')))
 
     await driver.findElement(By.css('#app-settings-header button')).click()
 
-    try {
-      var addressbookActionItem = await driver.findElement(By.css('#addressbook-list li .icon-shared ~ .action-item button'))
-
-      while(addressbookActionItem) {
-        await addressbookActionItem.click()
-
-        await driver.wait(until.elementLocated(By.css('.popover')))
-
-        var actionIcon = await driver.findElement(By.css('.popover .action-button .icon-delete'))
-        var actionButton = await actionIcon.findElement(By.xpath('./parent::button'))
-        await actionButton.click()
-
-        await driver.wait(until.elementLocated(By.css('.oc-dialog')))
-
-        await driver.findElement(By.css('.oc-dialog button.primary')).click()
-
-        await driver.wait(until.elementLocated(By.css('#app-settings-header')))
-
-        await driver.findElement(By.css('#app-settings-header button')).click()
-
-        addressbookActionItem = await driver.findElement(By.css('#addressbook-list li .icon-shared ~ .action-item button'))
-      }
-    } catch (e) {
-      if (e.name != 'NoSuchElementError') {
-        throw e
-      }
-    }
+    return Promise.all(
+      (await driver.findElements(By.css('#addressbook-list li .icon-shared')))
+      .map((element) => element.findElement(By.xpath('./parent::li/span')).getAttribute('title'))
+    )
   }
 
-  before(async () => {
-    await login()
-    await reset()
-  })
+  async function deleteAddressbook(title) {
+    await driver.wait(until.elementLocated(By.css('#app-settings-header')))
+
+    await driver.findElement(By.css('#app-settings-header button')).click()
+
+    await driver.findElement(By.css('#addressbook-list li *[title="' + title + '"] ~ .action-item button')).click()
+
+    await driver.wait(until.elementLocated(By.css('.popover')))
+
+    var actionIcon = await driver.findElement(By.css('.popover .action-button .icon-delete'))
+    await actionIcon.findElement(By.xpath('./parent::button')).click()
+
+    await driver.wait(until.elementLocated(By.css('.oc-dialog')))
+
+    await driver.findElement(By.css('.oc-dialog button.primary')).click()
+  }
 
   after(async () => {
     driver.quit()
