@@ -1,5 +1,8 @@
+const Config = require('../config')
+
 const { Builder, By, Key, until } = require('selenium-webdriver');
 const { expect } = require('chai');
+const path = require('path');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -14,10 +17,10 @@ describe('Contact Groups', () => {
   })
 
   async function login() {
-    await driver.get('https://local.zlattinger.net/login')
+    await driver.get(path.join(Config.NextcloudBaseUrl, '/login'))
     const loginForm = await driver.findElement(By.name('login'))
-    await loginForm.findElement(By.name('user')).sendKeys('zlajo')
-    await loginForm.findElement(By.name('password')).sendKeys('password')
+    await loginForm.findElement(By.name('user')).sendKeys(Config.Username)
+    await loginForm.findElement(By.name('password')).sendKeys(Config.Password)
     await loginForm.findElement(By.css('input[type="submit"]')).click()
 
     const url = await driver.getCurrentUrl()
@@ -28,7 +31,7 @@ describe('Contact Groups', () => {
   }
 
   async function reset() {
-    await driver.get('https://local.zlattinger.net/apps/contacts/All contacts')
+    await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
 
     for (let title of await getAddressbookTitles()) {
       await deleteAddressbook(title)
@@ -72,7 +75,7 @@ describe('Contact Groups', () => {
   })
 
   it('should create contact with single contact group', async () => {
-    await driver.get('https://local.zlattinger.net/apps/contacts/All contacts')
+    await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
 
     await driver.wait(until.elementLocated(By.css('#new-contact-button')))
 

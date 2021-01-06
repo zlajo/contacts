@@ -31,7 +31,7 @@
 		"lint:fix": "eslint --ext .js,.vue src --fix",
 		"stylelint": "stylelint src",
 		"stylelint:fix": "stylelint src --fix",
-		"test": "node_modules/.bin/mocha tests/js/* --timeout 10000"
+		"test": "node_modules/.bin/mocha --timeout 10000 tests/js/*"
 	},
 	"dependencies": {
 		"@mattkrick/sanitize-svg": "^0.3.1",
