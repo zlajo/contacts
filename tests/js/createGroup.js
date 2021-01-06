@@ -5,7 +5,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('DefaultTest', () => {
+describe('Contact Groups', () => {
   let driver = new Builder().forBrowser('firefox').build()
 
   before(async () => {
@@ -71,13 +71,30 @@ describe('DefaultTest', () => {
     driver.quit()
   })
 
-  it('should open Nextcloud', async () => {
-    // await driver.get('https://local.zlattinger.net/apps/contacts/All contacts')
-    //
-    // const title = await driver.getTitle()
-    //
-    // console.log(await driver.getCurrentUrl())
-    //
-    // expect(title).to.equal('Contacts - Nextcloud')
+  it('should create contact with single contact group', async () => {
+    await driver.get('https://local.zlattinger.net/apps/contacts/All contacts')
+
+    await driver.wait(until.elementLocated(By.css('#new-contact-button')))
+
+    await driver.findElement(By.css('#new-contact-button')).click()
+
+    await driver.wait(until.elementLocated(By.css('#contact-fullname')))
+    await driver.findElement(By.css('#contact-fullname')).click()
+    await driver.findElement(By.css('#contact-fullname')).sendKeys('Anton Aichinger')
+
+    let groupSelector = await driver.findElement(By.css('.property--groups input.multiselect__input'))
+    await groupSelector.click()
+    await groupSelector.sendKeys('A', Key.ENTER)
+
+    let contactGroup = await driver.wait(until.elementLocated(By.css('.app-navigation-entry a[href="/apps/contacts/A"]')))
+    await contactGroup.click()
+
+    await driver.wait(until.elementLocated(By.css('#contacts-list')))
+
+    let contactTitles = await Promise.all(
+      (await driver.findElements(By.css('#contacts-list .app-content-list-item-line-one')))
+      .map((element) => element.getText())
+    )
+    expect(contactTitles).to.eql(['Anton Aichinger'])
   })
 })
