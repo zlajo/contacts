@@ -6,7 +6,7 @@ function sleep(ms) {
 }
 
 describe('DefaultTest', () => {
-  var driver = new Builder().forBrowser('firefox').build()
+  let driver = new Builder().forBrowser('firefox').build()
 
   before(async () => {
     await login()
@@ -36,31 +36,35 @@ describe('DefaultTest', () => {
   }
 
   async function getAddressbookTitles() {
-    await driver.wait(until.elementLocated(By.css('#app-settings-header')))
-
-    await driver.findElement(By.css('#app-settings-header button')).click()
+    let settingsButton = await driver.wait(until.elementLocated(By.css('#app-settings-header button')))
+    if (await settingsButton.isDisplayed()) {
+      await settingsButton.click()
+      await settingsButton.click()
+    } else {
+      await settingsButton.click()
+    }
 
     return Promise.all(
-      (await driver.findElements(By.css('#addressbook-list li .icon-shared')))
+      (await driver.wait(until.elementsLocated(By.css('#addressbook-list li .icon-shared'))))
       .map((element) => element.findElement(By.xpath('./parent::li/span')).getAttribute('title'))
     )
   }
 
   async function deleteAddressbook(title) {
-    await driver.wait(until.elementLocated(By.css('#app-settings-header')))
+    let settingsButton = await driver.wait(until.elementLocated(By.css('#app-settings-header button')))
+    await settingsButton.click()
 
-    await driver.findElement(By.css('#app-settings-header button')).click()
+    let addressbookMenuButton = await driver.wait(
+      until.elementLocated(By.css('#addressbook-list li *[title="' + title + '"] ~ .action-item button'))
+    )
+    await addressbookMenuButton.click()
 
-    await driver.findElement(By.css('#addressbook-list li *[title="' + title + '"] ~ .action-item button')).click()
-
-    await driver.wait(until.elementLocated(By.css('.popover')))
-
-    var actionIcon = await driver.findElement(By.css('.popover .action-button .icon-delete'))
+    let actionIcon = await driver.wait(until.elementLocated(By.css('.popover .action-button .icon-delete')))
     await actionIcon.findElement(By.xpath('./parent::button')).click()
 
-    await driver.wait(until.elementLocated(By.css('.oc-dialog')))
+    let confirmationButton = await driver.wait(until.elementLocated(By.css('.oc-dialog button.primary')))
 
-    await driver.findElement(By.css('.oc-dialog button.primary')).click()
+    await confirmationButton.click()
   }
 
   after(async () => {
