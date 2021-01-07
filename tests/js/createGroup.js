@@ -16,6 +16,12 @@ describe('Contact Groups', () => {
     await reset()
   })
 
+  after(async () => {
+    await reset()
+
+    driver.quit()
+  })
+
   async function login() {
     await driver.get(path.join(Config.NextcloudBaseUrl, '/login'))
     const loginForm = await driver.findElement(By.name('login'))
@@ -70,34 +76,47 @@ describe('Contact Groups', () => {
     await confirmationButton.click()
   }
 
-  after(async () => {
-    driver.quit()
-  })
-
   it('should create contact with single contact group', async () => {
     await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
 
+    await createContact({fullname: 'Anton Aichinger'})
+
+    await addContactToGroup('A')
+
+    let contactTitles = await getGroupContacts('A')
+
+    expect(contactTitles).to.eql(['Anton Aichinger'])
+  })
+
+  async function createContact(fields) {
     await driver.wait(until.elementLocated(By.css('#new-contact-button')))
 
     await driver.findElement(By.css('#new-contact-button')).click()
 
     await driver.wait(until.elementLocated(By.css('#contact-fullname')))
     await driver.findElement(By.css('#contact-fullname')).click()
-    await driver.findElement(By.css('#contact-fullname')).sendKeys('Anton Aichinger')
+    await driver.findElement(By.css('#contact-fullname')).sendKeys(fields.fullname)
 
+    await driver.wait(until.stalenessOf(driver.findElement(By.css('.contact-header__actions .icon-error'))))
+  }
+
+  async function addContactToGroup(groupName) {
     let groupSelector = await driver.findElement(By.css('.property--groups input.multiselect__input'))
     await groupSelector.click()
-    await groupSelector.sendKeys('A', Key.ENTER)
+    await groupSelector.sendKeys(groupName, Key.ENTER)
 
-    let contactGroup = await driver.wait(until.elementLocated(By.css('.app-navigation-entry a[href="/apps/contacts/A"]')))
+    await driver.wait(until.elementLocated(By.css('.app-navigation-entry a[href="/apps/contacts/' + groupName + '"]')))
+  }
+
+  async function getGroupContacts(groupName) {
+    let contactGroup = await driver.wait(until.elementLocated(By.css('.app-navigation-entry a[href="/apps/contacts/' + groupName + '"]')))
     await contactGroup.click()
 
     await driver.wait(until.elementLocated(By.css('#contacts-list')))
 
-    let contactTitles = await Promise.all(
+    return await Promise.all(
       (await driver.findElements(By.css('#contacts-list .app-content-list-item-line-one')))
       .map((element) => element.getText())
     )
-    expect(contactTitles).to.eql(['Anton Aichinger'])
-  })
+  }
 })
