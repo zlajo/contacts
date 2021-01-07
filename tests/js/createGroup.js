@@ -13,6 +13,9 @@ describe('Contact Groups', () => {
 
   before(async () => {
     await login()
+  })
+
+  beforeEach(async () => {
     await reset()
   })
 
@@ -76,16 +79,36 @@ describe('Contact Groups', () => {
     await confirmationButton.click()
   }
 
-  it('should create contact with single contact group', async () => {
+  it('should create contact with single newly created contact group', async () => {
+    await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
+    await createContact({fullname: 'Anton Aichinger'})
+    await addContactToGroup('A')
+    expect(await getGroupContacts('A')).to.have.members(['Anton Aichinger'])
+  })
+
+  it('should create contact with two newly created contact groups', async () => {
+    await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
+    await createContact({fullname: 'Anton Aichinger'})
+    await addContactToGroup('A')
+    await addContactToGroup('AA')
+    expect(await getGroupContacts('A')).to.have.members(['Anton Aichinger'])
+    expect(await getGroupContacts('AA')).to.have.members(['Anton Aichinger'])
+  })
+
+  it('should create two contact with three partialy overlapping contact groups', async () => {
     await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
 
     await createContact({fullname: 'Anton Aichinger'})
-
     await addContactToGroup('A')
+    await addContactToGroup('AB')
 
-    let contactTitles = await getGroupContacts('A')
+    await createContact({fullname: 'Bernd Bauer'})
+    await addContactToGroup('B')
+    await addContactToGroup('AB')
 
-    expect(contactTitles).to.eql(['Anton Aichinger'])
+    expect(await getGroupContacts('A')).to.have.members(['Anton Aichinger'])
+    expect(await getGroupContacts('AB')).to.have.members(['Anton Aichinger', 'Bernd Bauer'])
+    expect(await getGroupContacts('B')).to.have.members(['Bernd Bauer'])
   })
 
   async function createContact(fields) {
@@ -114,9 +137,11 @@ describe('Contact Groups', () => {
 
     await driver.wait(until.elementLocated(By.css('#contacts-list')))
 
-    return await Promise.all(
+    let titles = await Promise.all(
       (await driver.findElements(By.css('#contacts-list .app-content-list-item-line-one')))
       .map((element) => element.getText())
     )
+
+    return titles.filter((title) => title.trim() !== '')
   }
 })
