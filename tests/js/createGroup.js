@@ -8,7 +8,7 @@ const Config = require('../config')
 
 function UserInteractions(driver) {
 	return {
-		login: async() => {
+		login: async function() {
 			await driver.get(path.join(Config.NextcloudBaseUrl, '/login'))
 			const loginForm = await driver.findElement(By.name('login'))
 			await loginForm.findElement(By.name('user')).sendKeys(Config.Username)
@@ -22,7 +22,7 @@ function UserInteractions(driver) {
 			}
 		},
 
-		clearContacts: async() => {
+		clearContacts: async function() {
 			await driver.get(path.join(Config.NextcloudBaseUrl, '/apps/contacts/All contacts'))
 
 			for (const title of await this.getAddressbookTitles()) {
@@ -30,7 +30,7 @@ function UserInteractions(driver) {
 			}
 		},
 
-		getAddressbookTitles: async() => {
+		getAddressbookTitles: async function() {
 			const settingsButton = await driver.wait(until.elementLocated(By.css('#app-settings-header button')))
 			if (await settingsButton.isDisplayed()) {
 				await settingsButton.click()
@@ -45,7 +45,7 @@ function UserInteractions(driver) {
 			)
 		},
 
-		deleteAddressbook: async(title) => {
+		deleteAddressbook: async function(title) {
 			const settingsButton = await driver.wait(until.elementLocated(By.css('#app-settings-header button')))
 			await settingsButton.click()
 
@@ -62,7 +62,7 @@ function UserInteractions(driver) {
 			await confirmationButton.click()
 		},
 
-		createContact: async(fields) => {
+		createContact: async function(fields) {
 			await driver.wait(until.elementLocated(By.css('#new-contact-button')))
 
 			await driver.findElement(By.css('#new-contact-button')).click()
@@ -74,7 +74,7 @@ function UserInteractions(driver) {
 			await driver.wait(until.stalenessOf(driver.findElement(By.css('.contact-header__actions .icon-error'))))
 		},
 
-		addContactToGroup: async(groupName) => {
+		addContactToGroup: async function(groupName) {
 			const groupSelector = await driver.findElement(By.css('.property--groups input.multiselect__input'))
 			await groupSelector.click()
 			await groupSelector.sendKeys(groupName, Key.ENTER)
@@ -82,7 +82,7 @@ function UserInteractions(driver) {
 			await driver.wait(until.elementLocated(By.css('.app-navigation-entry a[href="/apps/contacts/' + groupName + '"]')))
 		},
 
-		getGroupContacts: async(groupName) => {
+		getGroupContacts: async function(groupName) {
 			const contactGroup = await driver.wait(
 				until.elementLocated(
 					By.css('.app-navigation-entry a[href="/apps/contacts/' + groupName + '"]')
