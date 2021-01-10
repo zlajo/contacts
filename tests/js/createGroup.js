@@ -4,8 +4,10 @@ const path = require('path')
 
 const Config = require('../config')
 
-// const { sleep } = require('./testUtilities')
+const { fetchAllCards /*, sleep */ } = require('./testUtilities')
 
+/* eslint-disable object-shorthand */
+/* object-shorthand must be disabled for user interactions because they should be composable. (see clearContacts()) */
 function UserInteractions(driver) {
 	return {
 		login: async function() {
@@ -101,6 +103,7 @@ function UserInteractions(driver) {
 		},
 	}
 }
+/* eslint-enable object-shorthand */
 
 describe('Contact Groups', () => {
 	const driver = new Builder().forBrowser('firefox').build()
@@ -126,6 +129,9 @@ describe('Contact Groups', () => {
 		await UserInteractions(driver).addContactToGroup('A')
 
 		expect(await UserInteractions(driver).getGroupContacts('A')).to.have.members(['Anton Aichinger'])
+
+		const cardFullNames = await fetchAllCards().then(cards => cards.map(c => c.getFirstPropertyValue('fn')))
+		expect(cardFullNames).to.include('Anton Aichinger')
 	})
 
 	it('should create contact with two newly created contact groups', async() => {
