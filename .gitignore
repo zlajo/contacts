@@ -22,3 +22,4 @@ vendor/
 .php_cs.cache
 composer.phar
 /tests/config.js
+.phpunit.result.cache

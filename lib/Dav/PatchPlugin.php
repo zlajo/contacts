@@ -35,6 +35,9 @@ use Sabre\DAV\ServerPlugin;
 use Sabre\HTTP\RequestInterface;
 use Sabre\HTTP\ResponseInterface;
 use Sabre\VObject\Reader;
+use Sabre\VObject\UUIDUtil;
+use Sabre\VObject\Writer;
+use Sabre\VObject\Component\VCard;
 
 class PatchPlugin extends ServerPlugin {
 	public const METHOD_REPLACE = 0;
@@ -151,6 +154,39 @@ class PatchPlugin extends ServerPlugin {
 		$response->setStatus(200);
 
 		return false;
+	}
+
+	public function transferCategoriesToGroups(VCard $contact, array $groups): array {
+		$categories = [];
+		if (isset($contact->CATEGORIES)) {
+			$categories = array_filter(
+				explode(',', $contact->CATEGORIES->getValue()),
+				fn($c) => trim($c) <> ""
+			);
+		}
+
+		$updatedGroups = [];
+		foreach ($categories as $idx => $category) {
+			$group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $category))[0];
+
+			if (is_null($group)) {
+				$rawGroup = implode("\r\n", [
+					"BEGIN:VCARD",
+		      "VERSION:3.0",
+					"X-ADDRESSBOOKSERVER-KIND:group",
+		      "UID:".UUIDUtil::getUUID(),
+		      "FN:".$category,
+		      "END:VCARD"
+				]);
+				$group = Reader::read($rawGroup);
+			}
+
+			$group->add('X-ADDRESSBOOKSERVER-MEMBER', "urn:uuid:".$contact->UID->getValue());
+
+			$updatedGroups[] = $group;
+		}
+
+		return $updatedGroups;
 	}
 
 	/**
