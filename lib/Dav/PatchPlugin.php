@@ -165,25 +165,44 @@ class PatchPlugin extends ServerPlugin {
 			);
 		}
 
-		$updatedGroups = [];
-		foreach ($categories as $idx => $category) {
-			$group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $category))[0];
+		$groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
 
-			if (is_null($group)) {
+		$contactReference = "urn:uuid:".$contact->UID->getValue();
+
+		$updatedGroups = [];
+
+		foreach ($categories as $category) {
+			if (!in_array($category, $groupNames)) {
 				$rawGroup = implode("\r\n", [
 					"BEGIN:VCARD",
 		      "VERSION:3.0",
 					"X-ADDRESSBOOKSERVER-KIND:group",
 		      "UID:".UUIDUtil::getUUID(),
 		      "FN:".$category,
+					"X-ADDRESSBOOKSERVER-MEMBER:".$contactReference,
 		      "END:VCARD"
 				]);
-				$group = Reader::read($rawGroup);
+				$updatedGroups[] = Reader::read($rawGroup);
 			}
+		}
 
-			$group->add('X-ADDRESSBOOKSERVER-MEMBER', "urn:uuid:".$contact->UID->getValue());
+		foreach ($groups as $group) {
+			$groupName = $group->FN->getValue();
+			$groupMembers = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
 
-			$updatedGroups[] = $group;
+			if (in_array($groupName, $categories) && !in_array($contactReference, $groupMembers)) {
+				$group->add('X-ADDRESSBOOKSERVER-MEMBER', $contactReference);
+
+				$updatedGroups[] = $group;
+			} else if (!in_array($groupName, $categories) && in_array($contactReference, $groupMembers)) {
+				foreach ($group->select('X-ADDRESSBOOKSERVER-MEMBER') as $membership) {
+					if ($membership->getValue() == $contactReference) {
+						$group->remove($membership);
+
+						$updatedGroups[] = $group;
+					}
+				}
+			}
 		}
 
 		return $updatedGroups;

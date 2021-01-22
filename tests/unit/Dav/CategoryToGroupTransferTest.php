@@ -28,23 +28,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 
 use Sabre\DAV\Server;
 use Sabre\VObject\Reader;
+use Sabre\VObject\Writer;
 use Sabre\VObject\Component\VCard;
 
-
-class CategoryToGroupTransferTest extends TestCase {
-  private $controller;
-
-  private $server;
-
-  protected function setUp(): void {
-		parent::setUp();
-
-		$this->server = $this->createMock(Server::class);
-
-		$this->controller = new PatchPlugin();
-    $this->controller->initialize($this->server);
-	}
-
+trait VCardTestUtilities {
   public function createContact(string $uid, string $fn, array $categories): VCard {
     $rawCard = implode("\r\n", [
       "BEGIN:VCARD",
@@ -73,6 +60,58 @@ class CategoryToGroupTransferTest extends TestCase {
     ));
     return Reader::read($rawCard);
   }
+}
+
+trait VCardTestAssertions {
+  public function assertContainsGroup(string $groupName, array $groups) {
+    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
+
+    $this->assertContains($groupName, $groupNames);
+  }
+
+  public function assertNotContainsGroup(string $groupName, array $groups) {
+    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
+
+    $this->assertNotContains($groupName, $groupNames);
+  }
+
+  public function assertGroupContainsMember(string $groupName, string $member, array $groups) {
+    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
+
+    $this->assertNotNull($group);
+
+    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+
+    $this->assertContains($member, $members);
+  }
+
+  public function assertNotGroupContainsMember(string $groupName, string $member, array $groups) {
+    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
+
+    $this->assertNotNull($group);
+
+    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+
+    $this->assertNotContains($member, $members);
+  }
+}
+
+class CategoryToGroupTransferTest extends TestCase {
+  use VCardTestUtilities;
+  use VCardTestAssertions;
+
+  private $controller;
+
+  private $server;
+
+  protected function setUp(): void {
+		parent::setUp();
+
+		$this->server = $this->createMock(Server::class);
+
+		$this->controller = new PatchPlugin();
+    $this->controller->initialize($this->server);
+	}
 
   public function testContactWithNoCategories() {
     $contact = $this->createContact("11111", "Anton Adler", []);
@@ -88,8 +127,8 @@ class CategoryToGroupTransferTest extends TestCase {
     $updatedGroups = $this->controller->transferCategoriesToGroups($contact, []);
 
     $this->assertCount(1, $updatedGroups);
-    $this->assertEquals("A", $updatedGroups[0]->{'FN'}->getValue());
-    $this->assertEquals("urn:uuid:11111", $updatedGroups[0]->{'X-ADDRESSBOOKSERVER-MEMBER'}->getValue());
+    $this->assertContainsGroup("A", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:11111", $updatedGroups);
   }
 
   public function testContactWithOneNewAndOneExistingCategory() {
@@ -99,16 +138,10 @@ class CategoryToGroupTransferTest extends TestCase {
     $updatedGroups = $this->controller->transferCategoriesToGroups($contact, [$group]);
 
     $this->assertCount(2, $updatedGroups);
-    $this->assertContains("A", array_map(fn($g) => $g->FN->getValue(), $updatedGroups));
-    $this->assertContains("B", array_map(fn($g) => $g->FN->getValue(), $updatedGroups));
-
-    $groupA = array_values(array_filter($updatedGroups, fn($g) => $g->FN->getValue() == "A"))[0];
-    $groupB = array_values(array_filter($updatedGroups, fn($g) => $g->FN->getValue() == "B"))[0];
-
-    // fwrite(STDOUT, print_r($groupA, TRUE));
-
-    $this->assertEquals("urn:uuid:11111", $groupA->{'X-ADDRESSBOOKSERVER-MEMBER'}->getValue());
-    $this->assertEquals("urn:uuid:11111", $groupB->{'X-ADDRESSBOOKSERVER-MEMBER'}->getValue());
+    $this->assertContainsGroup("A", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:11111", $updatedGroups);
+    $this->assertContainsGroup("B", $updatedGroups);
+    $this->assertGroupContainsMember("B", "urn:uuid:11111", $updatedGroups);
   }
 
   public function testContactWithCategoryWithFurtherMembers() {
@@ -117,14 +150,55 @@ class CategoryToGroupTransferTest extends TestCase {
 
     $updatedGroups = $this->controller->transferCategoriesToGroups($contact, [$group]);
 
-    $groupA = array_values(array_filter($updatedGroups, fn($g) => $g->FN->getValue() == "A"))[0];
+    $this->assertCount(1, $updatedGroups);
+    $this->assertContainsGroup("A", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:11111", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:00001", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:00002", $updatedGroups);
+  }
 
-    // fwrite(STDOUT, print_r(
-    //   array_map(fn($p) => $p->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER')),
-    //   TRUE));
+  public function testContactWithExistingGroupMembership() {
+    $contact = $this->createContact("11111", "Anton Adler", ["A", "B"]);
+    $groups = [
+      $this->createGroup("AAAAA", "A", ["11111"]),
+      $this->createGroup("BBBBB", "B", ["00001", "11111"])
+    ];
 
-    $this->assertContains("urn:uuid:11111", array_map(fn($p) => $p->getValue(), $groupA->select('X-ADDRESSBOOKSERVER-MEMBER')));
-    $this->assertContains("urn:uuid:00001", array_map(fn($p) => $p->getValue(), $groupA->select('X-ADDRESSBOOKSERVER-MEMBER')));
-    $this->assertContains("urn:uuid:00002", array_map(fn($p) => $p->getValue(), $groupA->select('X-ADDRESSBOOKSERVER-MEMBER')));
+    $updatedGroups = $this->controller->transferCategoriesToGroups($contact, $groups);
+
+    $this->assertEmpty($updatedGroups);
+  }
+
+  public function testContactWithExistingAndNewGroupMembership() {
+    $contact = $this->createContact("11111", "Anton Adler", ["A", "B", "C"]);
+    $groups = [
+      $this->createGroup("AAAAA", "A", ["11111"]),
+      $this->createGroup("BBBBB", "B", [])
+    ];
+
+    $updatedGroups = $this->controller->transferCategoriesToGroups($contact, $groups);
+
+    $this->assertCount(2, $updatedGroups);
+
+    $this->assertNotContainsGroup("A", $updatedGroups);
+
+    $this->assertContainsGroup("B", $updatedGroups);
+    $this->assertGroupContainsMember("B", "urn:uuid:11111", $updatedGroups);
+
+    $this->assertContainsGroup("C", $updatedGroups);
+    $this->assertGroupContainsMember("C", "urn:uuid:11111", $updatedGroups);
+  }
+
+  public function testRemoveContactCategory() {
+    $contact = $this->createContact("11111", "Anton Adler", []);
+    $groups = [
+      $this->createGroup("AAAAA", "A", ["00001", "11111"])
+    ];
+
+    $updatedGroups = $this->controller->transferCategoriesToGroups($contact, $groups);
+
+    $this->assertContainsGroup("A", $updatedGroups);
+    $this->assertGroupContainsMember("A", "urn:uuid:00001", $updatedGroups);
+    $this->assertNotGroupContainsMember("A", "urn:uuid:11111", $updatedGroups);
   }
 }
