@@ -27,78 +27,15 @@ use ChristophWurst\Nextcloud\Testing\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 
 use Sabre\DAV\Server;
-use Sabre\VObject\Reader;
 use Sabre\VObject\Writer;
 use Sabre\VObject\Component\VCard;
 
-trait VCardTestUtilities {
-  public function createContact(string $uid, string $fn, array $categories): VCard {
-    $rawCard = implode("\r\n", [
-      "BEGIN:VCARD",
-      "VERSION:3.0",
-      "UID:".$uid,
-      "FN:".$fn,
-      "CATEGORIES:".implode(",", $categories),
-      "END:VCARD"
-    ]);
-    return Reader::read($rawCard);
-  }
-
-  public function createGroup(string $uid, string $fn, array $members = []): VCard {
-    $rawCard = implode("\r\n", array_merge(
-      [
-        "BEGIN:VCARD",
-        "VERSION:3.0",
-        "X-ADDRESSBOOKSERVER-KIND:group",
-        "UID:".$uid,
-        "FN:".$fn
-      ],
-      array_map(fn($id) => "X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:".$id, $members),
-      [
-        "END:VCARD"
-      ]
-    ));
-    return Reader::read($rawCard);
-  }
-}
-
-trait VCardTestAssertions {
-  public function assertContainsGroup(string $groupName, array $groups) {
-    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
-
-    $this->assertContains($groupName, $groupNames);
-  }
-
-  public function assertNotContainsGroup(string $groupName, array $groups) {
-    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
-
-    $this->assertNotContains($groupName, $groupNames);
-  }
-
-  public function assertGroupContainsMember(string $groupName, string $member, array $groups) {
-    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
-
-    $this->assertNotNull($group);
-
-    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
-
-    $this->assertContains($member, $members);
-  }
-
-  public function assertNotGroupContainsMember(string $groupName, string $member, array $groups) {
-    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
-
-    $this->assertNotNull($group);
-
-    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
-
-    $this->assertNotContains($member, $members);
-  }
-}
+include 'VCardTestUtilities.php';
+include 'VCardTestAssertions.php';
 
 class CategoryToGroupTransferTest extends TestCase {
-  use VCardTestUtilities;
-  use VCardTestAssertions;
+  use \VCardTestUtilities;
+  use \VCardTestAssertions;
 
   private $controller;
 
