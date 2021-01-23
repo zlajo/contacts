@@ -88,4 +88,29 @@ class GroupToCategoryTransferTest extends TestCase {
     $this->assertContactContainsCategory("Anton Adler", "A", $updatedContacts);
     $this->assertContactContainsCategory("Anton Adler", "X", $updatedContacts);
   }
+
+  public function testGroupWithRemovedMember() {
+    $group = $this->createGroup("AAAAA", "A", []);
+    $contacts = [
+      $this->createContact("11111", "Anton Adler", ['A', "B"]),
+    ];
+
+    $updatedContacts = $this->controller->transferGroupToCategories($group, $contacts);
+
+    $this->assertCount(1, $updatedContacts);
+    $this->assertContainsContact("Anton Adler", $updatedContacts);
+    $this->assertNotContactContainsCategory("Anton Adler", "A", $updatedContacts);
+    $this->assertContactContainsCategory("Anton Adler", "B", $updatedContacts);
+  }
+
+  public function testContactWithExistingGroupCategory() {
+    $group = $this->createGroup("AAAAA", "A", ["11111"]);
+    $contacts = [
+      $this->createContact("11111", "Anton Adler", ['A']),
+    ];
+
+    $updatedContacts = $this->controller->transferGroupToCategories($group, $contacts);
+
+    $this->assertEmpty($updatedContacts);
+  }
 }

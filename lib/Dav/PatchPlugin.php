@@ -209,16 +209,24 @@ class PatchPlugin extends ServerPlugin {
 	}
 
 	public function transferGroupToCategories(VCard $group, array $contacts): array {
+		$groupName = $group->FN->getValue();
 		$groupMembers = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
 
 		$updatedContacts = [];
 
 		foreach ($contacts as $contact) {
-			if (in_array("urn:uuid:".$contact->UID->getValue(), $groupMembers)) {
-				$categories = $contact->CATEGORIES ? explode(',', $contact->CATEGORIES->getValue()) : [];
+			$contactReference = "urn:uuid:".$contact->UID->getValue();
+
+			$categories = $contact->CATEGORIES ? explode(',', $contact->CATEGORIES->getValue()) : [];
+
+			if (in_array($contactReference, $groupMembers) && !in_array($groupName, $categories)) {
 				$categories[] = $group->FN->getValue();
 
 				$contact->CATEGORIES = implode(',', array_unique($categories));
+
+				$updatedContacts[] = $contact;
+			} else if (!in_array($contactReference, $groupMembers) && in_array($groupName, $categories)) {
+				$contact->CATEGORIES = implode(',', array_filter($categories, fn($c) => $c != $groupName));
 
 				$updatedContacts[] = $contact;
 			}

@@ -21,52 +21,62 @@
  *
  */
 
- trait VCardTestAssertions {
-   public function assertContainsGroup(string $groupName, array $groups) {
-     $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
+trait VCardTestAssertions {
+  public function assertContainsGroup(string $groupName, array $groups) {
+    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
 
-     $this->assertContains($groupName, $groupNames);
-   }
+    $this->assertContains($groupName, $groupNames);
+  }
 
-   public function assertNotContainsGroup(string $groupName, array $groups) {
-     $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
+  public function assertNotContainsGroup(string $groupName, array $groups) {
+    $groupNames = array_map(fn($g) => $g->FN->getValue(), $groups);
 
-     $this->assertNotContains($groupName, $groupNames);
-   }
+    $this->assertNotContains($groupName, $groupNames);
+  }
 
-   public function assertGroupContainsMember(string $groupName, string $member, array $groups) {
-     $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
+  public function assertGroupContainsMember(string $groupName, string $member, array $groups) {
+    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
 
-     $this->assertNotNull($group);
+    $this->assertNotNull($group);
 
-     $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
 
-     $this->assertContains($member, $members);
-   }
+    $this->assertContains($member, $members);
+  }
 
-   public function assertNotGroupContainsMember(string $groupName, string $member, array $groups) {
-     $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
+  public function assertNotGroupContainsMember(string $groupName, string $member, array $groups) {
+    $group = array_values(array_filter($groups, fn($g) => $g->FN->getValue() == $groupName))[0];
 
-     $this->assertNotNull($group);
+    $this->assertNotNull($group);
 
-     $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+    $members = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
 
-     $this->assertNotContains($member, $members);
-   }
+    $this->assertNotContains($member, $members);
+  }
 
-   public function assertContainsContact(string $contactName, array $contacts) {
-     $contactNames = array_map(fn($g) => $g->FN->getValue(), $contacts);
+  public function assertContainsContact(string $contactName, array $contacts) {
+    $contactNames = array_map(fn($g) => $g->FN->getValue(), $contacts);
 
-     $this->assertContains($contactName, $contactNames);
-   }
+    $this->assertContains($contactName, $contactNames);
+  }
 
-   public function assertContactContainsCategory(string $contactName, string $category, array $contacts) {
-     $contact = array_values(array_filter($contacts, fn($g) => $g->FN->getValue() == $contactName))[0];
+  public function assertContactContainsCategory(string $contactName, string $category, array $contacts) {
+    $contact = array_values(array_filter($contacts, fn($g) => $g->FN->getValue() == $contactName))[0];
 
-     $this->assertNotNull($contact);
+    $this->assertNotNull($contact);
 
-     $categories = explode(',', $contact->CATEGORIES->getValue());
+    $categories = explode(',', $contact->CATEGORIES->getValue());
 
-     $this->assertContains($category, $categories);
-   }
- }
+    $this->assertContains($category, $categories);
+  }
+
+  public function assertNotContactContainsCategory(string $contactName, string $category, array $contacts) {
+    $contact = array_values(array_filter($contacts, fn($g) => $g->FN->getValue() == $contactName))[0];
+
+    $this->assertNotNull($contact);
+
+    $categories = explode(',', $contact->CATEGORIES->getValue());
+
+    $this->assertNotContains($category, $categories);
+  }
+}
