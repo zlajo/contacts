@@ -25,15 +25,26 @@ use Sabre\VObject\Reader;
 use Sabre\VObject\Component\VCard;
 
 trait VCardTestUtilities {
-  public function createContact(string $uid, string $fn, array $categories): VCard {
-    $rawCard = implode("\r\n", [
-      "BEGIN:VCARD",
-      "VERSION:3.0",
-      "UID:".$uid,
-      "FN:".$fn,
-      "CATEGORIES:".implode(",", $categories),
-      "END:VCARD"
-    ]);
+  public function createContact(string $uid, string $fn, array $categories = []): VCard {
+    if (empty($categories)) {
+      $rawCard = implode("\r\n", [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        "UID:".$uid,
+        "FN:".$fn,
+        "END:VCARD"
+      ]);
+    } else {
+      $rawCard = implode("\r\n", [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        "UID:".$uid,
+        "FN:".$fn,
+        "CATEGORIES:".implode(",", $categories),
+        "END:VCARD"
+      ]);
+    }
+
     return Reader::read($rawCard);
   }
 

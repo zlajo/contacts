@@ -30,8 +30,8 @@ use Sabre\DAV\Server;
 use Sabre\VObject\Writer;
 use Sabre\VObject\Component\VCard;
 
-include 'VCardTestUtilities.php';
-include 'VCardTestAssertions.php';
+include_once 'VCardTestUtilities.php';
+include_once 'VCardTestAssertions.php';
 
 class CategoryToGroupTransferTest extends TestCase {
   use \VCardTestUtilities;

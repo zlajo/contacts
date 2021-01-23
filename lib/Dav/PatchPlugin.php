@@ -208,6 +208,25 @@ class PatchPlugin extends ServerPlugin {
 		return $updatedGroups;
 	}
 
+	public function transferGroupToCategories(VCard $group, array $contacts): array {
+		$groupMembers = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+
+		$updatedContacts = [];
+
+		foreach ($contacts as $contact) {
+			if (in_array("urn:uuid:".$contact->UID->getValue(), $groupMembers)) {
+				$categories = $contact->CATEGORIES ? explode(',', $contact->CATEGORIES->getValue()) : [];
+				$categories[] = $group->FN->getValue();
+
+				$contact->CATEGORIES = implode(',', array_unique($categories));
+
+				$updatedContacts[] = $contact;
+			}
+		}
+
+		return $updatedContacts;
+	}
+
 	/**
 	 * Returns a plugin name.
 	 *

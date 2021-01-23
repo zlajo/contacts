@@ -53,4 +53,20 @@
 
      $this->assertNotContains($member, $members);
    }
+
+   public function assertContainsContact(string $contactName, array $contacts) {
+     $contactNames = array_map(fn($g) => $g->FN->getValue(), $contacts);
+
+     $this->assertContains($contactName, $contactNames);
+   }
+
+   public function assertContactContainsCategory(string $contactName, string $category, array $contacts) {
+     $contact = array_values(array_filter($contacts, fn($g) => $g->FN->getValue() == $contactName))[0];
+
+     $this->assertNotNull($contact);
+
+     $categories = explode(',', $contact->CATEGORIES->getValue());
+
+     $this->assertContains($category, $categories);
+   }
  }
