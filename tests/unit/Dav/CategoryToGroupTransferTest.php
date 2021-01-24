@@ -26,9 +26,8 @@ namespace OCA\Contacts\Dav;
 use ChristophWurst\Nextcloud\Testing\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 
+use Psr\Log\LoggerInterface;
 use Sabre\DAV\Server;
-use Sabre\VObject\Writer;
-use Sabre\VObject\Component\VCard;
 
 include_once 'VCardTestUtilities.php';
 include_once 'VCardTestAssertions.php';
@@ -37,16 +36,19 @@ class CategoryToGroupTransferTest extends TestCase {
   use \VCardTestUtilities;
   use \VCardTestAssertions;
 
-  private $controller;
+  private $logger;
 
   private $server;
+
+  private $controller;
 
   protected function setUp(): void {
 		parent::setUp();
 
+    $this->logger = $this->createMock(LoggerInterface::class);
 		$this->server = $this->createMock(Server::class);
 
-		$this->controller = new PatchPlugin();
+		$this->controller = new CategoryGroupSynchronizationPlugin($this->logger);
     $this->controller->initialize($this->server);
 	}
 
