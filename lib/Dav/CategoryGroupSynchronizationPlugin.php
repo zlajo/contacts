@@ -149,4 +149,40 @@ class CategoryGroupSynchronizationPlugin extends ServerPlugin {
 
 		return $updatedContacts;
 	}
+
+	public function deleteContactFromGroups(string $contactId, array $groups) {
+		$contactReference = "urn:uuid:".$contactId;
+
+		$updatedGroups = [];
+
+		foreach ($groups as $group) {
+			$groupMembers = array_map(fn($g) => $g->getValue(), $group->select('X-ADDRESSBOOKSERVER-MEMBER'));
+
+			foreach ($group->select('X-ADDRESSBOOKSERVER-MEMBER') as $membership) {
+				if ($membership->getValue() == $contactReference) {
+					$group->remove($membership);
+
+					$updatedGroups[] = $group;
+				}
+			}
+		}
+
+		return $updatedGroups;
+	}
+
+	public function deleteCategoryFromContacts(string $category, array $contacts) {
+		$updatedContacts = [];
+
+		foreach ($contacts as $contact) {
+			$categories = $contact->CATEGORIES ? explode(',', $contact->CATEGORIES->getValue()) : [];
+
+			if (in_array($category, $categories)) {
+				$contact->CATEGORIES = implode(',', array_filter($categories, fn($c) => $c != $category));
+
+				$updatedContacts[] = $contact;
+			}
+		}
+
+		return $updatedContacts;
+	}
 }
