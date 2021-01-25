@@ -56,7 +56,8 @@ class CategoryGroupSynchronizationPlugin extends ServerPlugin {
 		$this->server = $server;
 
 		$server->on('afterMethod:PUT', [$this, 'synchronize']);
-		$server->on('afterMethod:DESTROY', [$this, 'synchronize']);
+		$server->on('beforeMethod:DESTROY', [$this, 'synchronize']);
+		$server->on('beforeMethod:DELETE', [$this, 'synchronize']);
 	}
 
 	public function synchronize(RequestInterface $request, ResponseInterface $response) {
@@ -65,7 +66,9 @@ class CategoryGroupSynchronizationPlugin extends ServerPlugin {
 		$node = $this->server->tree->getNodeForPath($path);
 		$card = Reader::read($node->get());
 
-		$this->logger->debug("Method: {method} - Path: {path}", ['method' => $method, 'path' => $path]);
+		$this->logger->error("Method: {method} - Path: {path}", ['method' => $method, 'path' => $path]);
+
+		return true;
 	}
 
 	public function transferCategoriesToGroups(VCard $contact, array $groups): array {
